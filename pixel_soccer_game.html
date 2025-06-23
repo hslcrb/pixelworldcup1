@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>픽셀 월드컵 축구</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            color: white;
+        }
+        
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .field {
+            width: 800px;
+            height: 500px;
+            background: linear-gradient(45deg, #4a7c59, #357a3f);
+            border: 4px solid white;
+            position: relative;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        
+        .field::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            border: 3px solid white;
+            border-radius: 50%;
+            background: transparent;
+        }
+        
+        .field::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 100%;
+            background: white;
+        }
+        
+        .goal {
+            position: absolute;
+            width: 20px;
+            height: 100px;
+            background: rgba(255,255,255,0.8);
+            border: 2px solid white;
+        }
+        
+        .goal.left {
+            left: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .goal.right {
+            right: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .player {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            transition: all 0.1s ease;
+            image-rendering: pixelated;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .player.user {
+            background: radial-gradient(circle, #ff4444, #cc0000);
+        }
+        
+        .player.ai {
+            background: radial-gradient(circle, #4444ff, #0000cc);
+        }
+        
+        .ball {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, white, #ddd);
+            border: 1px solid #999;
+            border-radius: 50%;
+            transition: all 0.1s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+        
+        .ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .team-selector {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 200;
+            border: 3px solid #gold;
+        }
+        
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .team-btn {
+            padding: 15px;
+            background: linear-gradient(145deg, #333, #555);
+            border: 2px solid #666;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .team-btn:hover {
+            background: linear-gradient(145deg, #555, #777);
+            border-color: #gold;
+            transform: translateY(-2px);
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .timer {
+            font-size: 18px;
+            color: #gold;
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 300;
+            border: 3px solid #gold;
+        }
+        
+        .restart-btn {
+            padding: 15px 30px;
+            background: linear-gradient(145deg, #28a745, #20c997);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .restart-btn:hover {
+            background: linear-gradient(145deg, #20c997, #28a745);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="team-selector" id="teamSelector">
+            <h2>🏆 월드컵 팀 선택</h2>
+            <div class="team-grid" id="teamGrid"></div>
+        </div>
+        
+        <div class="field" id="field" style="display: none;">
+            <div class="goal left"></div>
+            <div class="goal right"></div>
+            <div class="ball" id="ball"></div>
+        </div>
+        
+        <div class="ui" id="ui" style="display: none;">
+            <div class="score">
+                <span id="userTeam">한국</span> <span id="userScore">0</span> : <span id="aiScore">0</span> <span id="aiTeam">브라질</span>
+            </div>
+            <div class="timer" id="timer">3:00</div>
+        </div>
+        
+        <div class="controls" id="controls" style="display: none;">
+            WASD 또는 화살표 키로 이동, 스페이스바로 킥!
+        </div>
+    </div>
+
+    <script>
+        const teams = [
+            { name: '한국', color: '#ff4444', flag: '🇰🇷' },
+            { name: '일본', color: '#ff6b6b', flag: '🇯🇵' },
+            { name: '브라질', color: '#28a745', flag: '🇧🇷' },
+            { name: '아르헨티나', color: '#17a2b8', flag: '🇦🇷' },
+            { name: '독일', color: '#333', flag: '🇩🇪' },
+            { name: '프랑스', color: '#007bff', flag: '🇫🇷' },
+            { name: '영국', color: '#6c757d', flag: '🇬🇧' },
+            { name: '스페인', color: '#dc3545', flag: '🇪🇸' },
+            { name: '이탈리아', color: '#28a745', flag: '🇮🇹' },
+            { name: '네덜란드', color: '#fd7e14', flag: '🇳🇱' },
+            { name: '포르투갈', color: '#dc3545', flag: '🇵🇹' },
+            { name: '멕시코', color: '#28a745', flag: '🇲🇽' }
+        ];
+        
+        let gameState = {
+            userTeam: null,
+            aiTeam: null,
+            userScore: 0,
+            aiScore: 0,
+            gameTime: 180,
+            gameRunning: false,
+            players: [],
+            ball: { x: 400, y: 250, vx: 0, vy: 0 }
+        };
+        
+        let keys = {};
+        
+        function initTeamSelector() {
+            const teamGrid = document.getElementById('teamGrid');
+            teams.forEach(team => {
+                const btn = document.createElement('div');
+                btn.className = 'team-btn';
+                btn.innerHTML = `${team.flag}<br>${team.name}`;
+                btn.onclick = () => selectTeam(team);
+                teamGrid.appendChild(btn);
+            });
+        }
+        
+        function selectTeam(team) {
+            gameState.userTeam = team;
+            gameState.aiTeam = teams[Math.floor(Math.random() * teams.length)];
+            while (gameState.aiTeam.name === team.name) {
+                gameState.aiTeam = teams[Math.floor(Math.random() * teams.length)];
+            }
+            startGame();
+        }
+        
+        function startGame() {
+            document.getElementById('teamSelector').style.display = 'none';
+            document.getElementById('field').style.display = 'block';
+            document.getElementById('ui').style.display = 'flex';
+            document.getElementById('controls').style.display = 'block';
+            
+            updateUI();
+            initPlayers();
+            gameState.gameRunning = true;
+            gameLoop();
+        }
+        
+        function initPlayers() {
+            const field = document.getElementById('field');
+            gameState.players = [];
+            
+            // 사용자 팀 (왼쪽)
+            for (let i = 0; i < 4; i++) {
+                const player = document.createElement('div');
+                player.className = 'player user';
+                player.style.backgroundColor = gameState.userTeam.color;
+                player.style.left = `${100 + i * 80}px`;
+                player.style.top = `${150 + i * 50}px`;
+                field.appendChild(player);
+                gameState.players.push({
+                    element: player,
+                    x: 100 + i * 80,
+                    y: 150 + i * 50,
+                    team: 'user',
+                    isControlled: i === 0
+                });
+            }
+            
+            // AI 팀 (오른쪽)
+            for (let i = 0; i < 4; i++) {
+                const player = document.createElement('div');
+                player.className = 'player ai';
+                player.style.backgroundColor = gameState.aiTeam.color;
+                player.style.left = `${500 + i * 80}px`;
+                player.style.top = `${150 + i * 50}px`;
+                field.appendChild(player);
+                gameState.players.push({
+                    element: player,
+                    x: 500 + i * 80,
+                    y: 150 + i * 50,
+                    team: 'ai'
+                });
+            }
+            
+            // 공 초기 위치
+            gameState.ball = { x: 400, y: 250, vx: 0, vy: 0 };
+            updateBallPosition();
+        }
+        
+        function updateUI() {
+            document.getElementById('userTeam').textContent = gameState.userTeam.name;
+            document.getElementById('aiTeam').textContent = gameState.aiTeam.name;
+            document.getElementById('userScore').textContent = gameState.userScore;
+            document.getElementById('aiScore').textContent = gameState.aiScore;
+            
+            const minutes = Math.floor(gameState.gameTime / 60);
+            const seconds = gameState.gameTime % 60;
+            document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function updateBallPosition() {
+            const ball = document.getElementById('ball');
+            ball.style.left = `${gameState.ball.x - 6}px`;
+            ball.style.top = `${gameState.ball.y - 6}px`;
+        }
+        
+        function updatePlayerPosition(player) {
+            player.element.style.left = `${player.x - 10}px`;
+            player.element.style.top = `${player.y - 10}px`;
+        }
+        
+        function gameLoop() {
+            if (!gameState.gameRunning) return;
+            
+            handleInput();
+            updateBall();
+            updateAI();
+            checkCollisions();
+            
+            gameState.gameTime--;
+            if (gameState.gameTime <= 0) {
+                endGame();
+                return;
+            }
+            
+            updateUI();
+            setTimeout(gameLoop, 1000);
+        }
+        
+        function handleInput() {
+            const controlledPlayer = gameState.players.find(p => p.isControlled);
+            if (!controlledPlayer) return;
+            
+            const speed = 3;
+            let moved = false;
+            
+            if (keys['w'] || keys['ArrowUp']) {
+                controlledPlayer.y = Math.max(10, controlledPlayer.y - speed);
+                moved = true;
+            }
+            if (keys['s'] || keys['ArrowDown']) {
+                controlledPlayer.y = Math.min(490, controlledPlayer.y + speed);
+                moved = true;
+            }
+            if (keys['a'] || keys['ArrowLeft']) {
+                controlledPlayer.x = Math.max(10, controlledPlayer.x - speed);
+                moved = true;
+            }
+            if (keys['d'] || keys['ArrowRight']) {
+                controlledPlayer.x = Math.min(790, controlledPlayer.x + speed);
+                moved = true;
+            }
+            
+            if (moved) {
+                updatePlayerPosition(controlledPlayer);
+            }
+            
+            if (keys[' ']) {
+                kick(controlledPlayer);
+                keys[' '] = false;
+            }
+        }
+        
+        function kick(player) {
+            const dx = gameState.ball.x - player.x;
+            const dy = gameState.ball.y - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 30) {
+                const power = 8;
+                gameState.ball.vx = (gameState.ball.x - player.x) / distance * power;
+                gameState.ball.vy = (gameState.ball.y - player.y) / distance * power;
+            }
+        }
+        
+        function updateBall() {
+            gameState.ball.x += gameState.ball.vx;
+            gameState.ball.y += gameState.ball.vy;
+            
+            // 벽 반사
+            if (gameState.ball.y <= 6 || gameState.ball.y >= 494) {
+                gameState.ball.vy *= -0.8;
+                gameState.ball.y = Math.max(6, Math.min(494, gameState.ball.y));
+            }
+            
+            // 골 체크
+            if (gameState.ball.x <= 0) {
+                if (gameState.ball.y > 200 && gameState.ball.y < 300) {
+                    gameState.aiScore++;
+                    resetBall();
+                } else {
+                    gameState.ball.vx *= -0.8;
+                    gameState.ball.x = 6;
+                }
+            }
+            
+            if (gameState.ball.x >= 800) {
+                if (gameState.ball.y > 200 && gameState.ball.y < 300) {
+                    gameState.userScore++;
+                    resetBall();
+                } else {
+                    gameState.ball.vx *= -0.8;
+                    gameState.ball.x = 794;
+                }
+            }
+            
+            // 마찰력
+            gameState.ball.vx *= 0.98;
+            gameState.ball.vy *= 0.98;
+            
+            updateBallPosition();
+        }
+        
+        function resetBall() {
+            gameState.ball = { x: 400, y: 250, vx: 0, vy: 0 };
+        }
+        
+        function updateAI() {
+            const aiPlayers = gameState.players.filter(p => p.team === 'ai');
+            
+            aiPlayers.forEach(player => {
+                const ballDx = gameState.ball.x - player.x;
+                const ballDy = gameState.ball.y - player.y;
+                const ballDistance = Math.sqrt(ballDx * ballDx + ballDy * ballDy);
+                
+                if (ballDistance < 100) {
+                    // 공 쫓기
+                    const speed = 2;
+                    player.x += Math.sign(ballDx) * speed;
+                    player.y += Math.sign(ballDy) * speed;
+                    
+                    // 킥
+                    if (ballDistance < 25) {
+                        gameState.ball.vx = -3;
+                        gameState.ball.vy = (Math.random() - 0.5) * 4;
+                    }
+                } else {
+                    // 기본 포지션으로 이동
+                    const targetX = 600;
+                    const targetY = 250;
+                    const dx = targetX - player.x;
+                    const dy = targetY - player.y;
+                    
+                    player.x += Math.sign(dx) * 1;
+                    player.y += Math.sign(dy) * 1;
+                }
+                
+                // 경계 제한
+                player.x = Math.max(10, Math.min(790, player.x));
+                player.y = Math.max(10, Math.min(490, player.y));
+                
+                updatePlayerPosition(player);
+            });
+        }
+        
+        function checkCollisions() {
+            gameState.players.forEach(player => {
+                const dx = gameState.ball.x - player.x;
+                const dy = gameState.ball.y - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 16) {
+                    const angle = Math.atan2(dy, dx);
+                    gameState.ball.vx = Math.cos(angle) * 5;
+                    gameState.ball.vy = Math.sin(angle) * 5;
+                }
+            });
+        }
+        
+        function endGame() {
+            gameState.gameRunning = false;
+            
+            const gameOverDiv = document.createElement('div');
+            gameOverDiv.className = 'game-over';
+            
+            let result = '';
+            if (gameState.userScore > gameState.aiScore) {
+                result = `🏆 승리! ${gameState.userTeam.name} ${gameState.userScore} - ${gameState.aiScore} ${gameState.aiTeam.name}`;
+            } else if (gameState.userScore < gameState.aiScore) {
+                result = `😢 패배... ${gameState.userTeam.name} ${gameState.userScore} - ${gameState.aiScore} ${gameState.aiTeam.name}`;
+            } else {
+                result = `🤝 무승부! ${gameState.userTeam.name} ${gameState.userScore} - ${gameState.aiScore} ${gameState.aiTeam.name}`;
+            }
+            
+            gameOverDiv.innerHTML = `
+                <h2>게임 종료!</h2>
+                <p>${result}</p>
+                <button class="restart-btn" onclick="location.reload()">다시 하기</button>
+            `;
+            
+            document.body.appendChild(gameOverDiv);
+        }
+        
+        // 이벤트 리스너
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ') e.preventDefault();
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+        
+        // 게임 초기화
+        initTeamSelector();
+    </script>
+</body>
+</html>
